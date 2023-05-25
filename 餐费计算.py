@@ -1,10 +1,12 @@
 # 导入pandas模块
 import pandas as pd
 
+excel_name = '11.xlsx'
+
 
 def meal_charges(start_time, end_time, xls_name, price):
     # 读取Excel文件
-    df = pd.read_excel('1.xlsx')
+    df = pd.read_excel(excel_name)
 
     # 删除不需要的列
     df = df.drop(df.columns[[3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14]], axis=1)
@@ -19,13 +21,14 @@ def meal_charges(start_time, end_time, xls_name, price):
               inplace=True)
 
     # 转换时间格式
+    # df = df.drop(df[df['姓名'] == '人员未注册'].index, inplace=True)
     df['识别时间'] = pd.to_datetime(df['识别时间'])
 
     # 采集起始、结束时间段
     start_time = start_time
     end_time = end_time
 
-    # 获取start_time到end_time的行
+    # 获取start_time到end_time的行,此处可以筛选到分钟数，
     mask = (df['识别时间'].dt.time >= pd.to_datetime(start_time).time()) & (
         df['识别时间'].dt.time <= pd.to_datetime(end_time).time())
     df = df.loc[mask]
@@ -65,8 +68,8 @@ def meal_charges(start_time, end_time, xls_name, price):
 
 
 # 4个参数分别是：开始时间-结束时间-表格名称-每餐费用
-meal_charges('06:00', '10:00', '早餐费', 4)
-meal_charges('16:00', '19:00', '晚餐费', 12)
+meal_charges('08:00', '09:10', '早餐费', 4)
+meal_charges('16:50', '18:30', '晚餐费', 12)
 
 
 # 此函数计算‘早餐费+晚餐费=总费用’
@@ -95,7 +98,7 @@ count_charges()
 
 # 此代码段给每个人生成一个excel打卡记录表格
 def everyone_record():
-    df = pd.read_excel('1.xlsx')
+    df = pd.read_excel(excel_name)
     df = df.drop(df.columns[[3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14]], axis=1)
     df.rename(columns={
         '姓名\nName': '姓名',
@@ -108,11 +111,12 @@ def everyone_record():
     df['识别时间'] = pd.to_datetime(df['识别时间'])
 
     # 此处无法对分钟和秒数进行筛选,如果加上"& (df['时间'].dt.minute <= 25)",会出错
-    df1 = df.loc[(df['识别时间'].dt.hour >= 5) & (df['识别时间'].dt.hour <= 10)]
+    df1 = df.loc[(df['识别时间'].dt.hour >= 7) & (df['识别时间'].dt.hour <= 10)]
     df1 = df1.groupby(['姓名', df1['识别时间'].dt.date]).head(1)
     df2 = df.loc[(df['识别时间'].dt.hour >= 16) & (df['识别时间'].dt.hour <= 19)]
     df2 = df2.groupby(['姓名', df2['识别时间'].dt.date]).head(1)
     df = pd.concat([df1, df2])
+    print(df)
     grouped = df.groupby('姓名')
     for name, group in grouped:
         # if len(group) == 2: //加上此代码，排序是所有日期的早上打卡，再是晚上打卡
