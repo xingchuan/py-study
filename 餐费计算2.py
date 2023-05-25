@@ -99,7 +99,7 @@ def count_charges():
 count_charges()
 
 
-# 此代码段给每个人生成一个excel打卡记录表格
+# 此代码段给每个人生成一个excel打卡记录表格,分成两个时间段进行筛选，最后在合并。
 def everyone_record():
     df = pd.read_excel(excel_name)
     df = df.drop(df.columns[[3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14]], axis=1)
@@ -113,29 +113,24 @@ def everyone_record():
 
     df['识别时间'] = pd.to_datetime(df['识别时间'])
 
-    # 此处无法对分钟和秒数进行筛选,如果加上"& (df['时间'].dt.minute <= 25)",会出错
-    # df1 = df.loc[(df['识别时间'].dt.hour >= 7) & (df['识别时间'].dt.hour <= 10)]
-
     # 按照日期（去掉时间）排序，每人每时间段只取一条
-
+    # 早上数据
     mask = (df['识别时间'].dt.time >= pd.to_datetime('08:00').time()) & (
         df['识别时间'].dt.time <= pd.to_datetime('10:00').time())
     df1 = df.loc[mask]
     df1 = df1.groupby(['姓名', df1['识别时间'].dt.date]).head(1)
 
+    # 晚上数据
     mask = (df['识别时间'].dt.time >= pd.to_datetime('16:00').time()) & (
         df['识别时间'].dt.time <= pd.to_datetime('19:00').time())
     df2 = df.loc[mask]
     df2 = df2.groupby(['姓名', df2['识别时间'].dt.date]).head(1)
 
-    # df2 = df.loc[(df['识别时间'].dt.hour >= 16) & (df['识别时间'].dt.hour <= 19)]
-    # df2 = df2.groupby(['姓名', df2['识别时间'].dt.date]).head(1)
-
     # 合并两个时间段（早晚餐）的数据
     df = pd.concat([df1, df2])
     grouped = df.groupby('姓名')
     for name, group in grouped:
-        # if len(group) == 2: //加上此代码，排序是所有日期的早上打卡，再是晚上打卡
+        # if len(group) == 2: //加上此代码，输出的表格中排序是所有日期的早上打卡，再是晚上打卡
         group.sort_values(by=['识别时间'], inplace=True)
         # group.drop_duplicates(subset=['时间'], keep='first', inplace=True)
         group.to_excel(f'{name}食堂刷脸记录.xlsx', index=False)
