@@ -118,6 +118,7 @@ def everyone_record():
         df['识别时间'].dt.time <= pd.to_datetime('10:00').time())
     df1 = df.loc[mask]
     # 按照日期（去掉时间）排序，每人每时间段只取一条
+    print(df1)
     df1 = df1.groupby(['姓名', df1['识别时间'].dt.date]).head(1)
 
     # 晚上数据
