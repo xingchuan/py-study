@@ -116,7 +116,6 @@ def everyone_record():
     df2 = df.loc[(df['识别时间'].dt.hour >= 16) & (df['识别时间'].dt.hour <= 19)]
     df2 = df2.groupby(['姓名', df2['识别时间'].dt.date]).head(1)
     df = pd.concat([df1, df2])
-    print(df)
     grouped = df.groupby('姓名')
     for name, group in grouped:
         # if len(group) == 2: //加上此代码，排序是所有日期的早上打卡，再是晚上打卡
