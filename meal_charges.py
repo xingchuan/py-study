@@ -140,7 +140,7 @@ def everyone_record():
         # if len(group) == 2: //加上此代码，输出的表格中排序是所有日期的早上打卡，再是晚上打卡
         group.sort_values(by=['识别时间'], inplace=True)
         # group.drop_duplicates(subset=['时间'], keep='first', inplace=True)
-        group.to_excel(f'{name}食堂刷脸记录.xlsx', index=False)
+        group.to_excel(f'{name}-食堂刷脸记录.xlsx', index=False)
 
 
 everyone_record()
