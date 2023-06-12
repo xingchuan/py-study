@@ -23,8 +23,7 @@ def meal_charges(start_time, end_time, xls_name, price):
         '部门\nDepartment': '部门',
         '人员编号\nPerson ID': '工号',
         '识别时间\nRecognition time': '识别时间'
-    },
-              inplace=True)
+    }, inplace=True)
 
     print(df)
     # 转换时间格式
