@@ -1,1 +1,1 @@
-print('yes')
+print('6.12')
