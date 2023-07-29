@@ -1,50 +1,65 @@
-'''
-此程序相对于‘餐费计算.py’在实现‘everyone_record’函数时使用了不同的方法
-'''
-# 导入pandas模块
 import pandas as pd
 
-excel_name = 'file.xlsx'
 
-
-# 此代码段对所有符合条件（吃饭时间内的刷脸记录）的人员进行筛选，生成一个表格。
-def all_record():
+# 此函数可通用，实现1、删除多余的列；2、重命名列名
+def excel_exec(excel_name):
+    # 读入excel表格
     df = pd.read_excel(excel_name, header=None)
+    # 删除第一行
     df.drop(0, inplace=True)
+    # 将第一行作为列名
     df.rename(columns=df.iloc[0], inplace=True)
+    # 删除第二行，第一行作为列名后，会在第二行重复出现
     df.drop(1, inplace=True)
+    # 删除不需要的列
     df = df.drop(df.columns[[3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14]], axis=1)
+    # 重命名列名
     df.rename(columns={
         '姓名\nName': '姓名',
         '部门\nDepartment': '部门',
         '人员编号\nPerson ID': '工号',
         '识别时间\nRecognition time': '识别时间'
     },
-              inplace=True)
+        inplace=True)
+    return df
 
-    df['部门'] = df['部门'].str.replace('-', '')
+
+df1 = excel_exec('食堂1.xlsx')
+df2 = excel_exec('食堂2.xlsx')
+
+# 合并食堂1、食堂2的数据
+df = pd.concat([df1, df2], axis=0)
+# 将合并后的表格保存为新的Excel文件
+df = df[df.iloc[:, 0] != '人员未注册']
+df['部门'] = df['部门'].str.split('/').str[-1]
+df.to_excel('合并.xlsx', index=False)
+
+
+# 此代码段对所有符合条件（吃饭时间内的刷脸记录）的人员进行筛选，生成一个表格。
+def all_record():
+    df = pd.read_excel('合并.xlsx')
 
     df['识别时间'] = pd.to_datetime(df['识别时间'])
 
     # 早上数据
-    mask = (df['识别时间'].dt.time >= pd.to_datetime('08:00').time()) & (
-        df['识别时间'].dt.time <= pd.to_datetime('13:00').time())
+    mask = (df['识别时间'].dt.time >= pd.to_datetime('07:30').time()) & (
+        df['识别时间'].dt.time <= pd.to_datetime('09:30').time())
     df1 = df.loc[mask]
     # 按照日期（去掉时间）排序，每人每时间段只取一条
     df1 = df1.groupby(['姓名', df1['识别时间'].dt.date]).head(1)
 
     # 晚上数据
-    mask = (df['识别时间'].dt.time >= pd.to_datetime('13:01').time()) & (
-        df['识别时间'].dt.time <= pd.to_datetime('19:00').time())
+    mask = (df['识别时间'].dt.time >= pd.to_datetime('17:00').time()) & (
+        df['识别时间'].dt.time <= pd.to_datetime('18:30').time())
     df2 = df.loc[mask]
     df2 = df2.groupby(['姓名', df2['识别时间'].dt.date]).head(1)
 
     # 合并两个时间段（早晚餐）的数据
     df = pd.concat([df1, df2])
-    
+
     sorted_df = df.sort_values(by=['姓名', '识别时间'])
 
-    with pd.ExcelWriter('本月餐费记录.xlsx') as writer:
+    with pd.ExcelWriter('本月打卡记录.xlsx') as writer:
         sorted_df.to_excel(writer, sheet_name='全部记录', index=False)
 
 
@@ -54,23 +69,8 @@ all_record()
 # 此函数会分别计算每个人的早、晚餐费用
 def meal_charges(start_time, end_time, xls_name, price):
     # 读取Excel文件,删除第一行，将第二行作为列名
-    df = pd.read_excel(excel_name, header=None)
-    df.drop(0, inplace=True)
-    df.rename(columns=df.iloc[0], inplace=True)
-    df.drop(1, inplace=True)
+    df = pd.read_excel('合并.xlsx')
 
-    # 删除不需要的列
-    df = df.drop(df.columns[[3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14]], axis=1)
-
-    # 重命名列名
-    df.rename(columns={
-        '姓名\nName': '姓名',
-        '部门\nDepartment': '部门',
-        '人员编号\nPerson ID': '工号',
-        '识别时间\nRecognition time': '识别时间'
-    }, inplace=True)
-
-    df['部门'] = df['部门'].str.replace('-', '')
     # 转换时间格式
     # df = df.drop(df[df['姓名'] == '人员未注册'].index, inplace=True)
     df['识别时间'] = pd.to_datetime(df['识别时间'])
@@ -109,7 +109,7 @@ def meal_charges(start_time, end_time, xls_name, price):
     df[xls_name] = counts[df['姓名']].values
 
     # 列数*每餐费用=本月总费用
-    df[xls_name] *= price
+    # df[xls_name] *= price
 
     # 每个人只保留第一行
     df.drop_duplicates(subset='姓名', keep='first', inplace=True)
@@ -119,14 +119,14 @@ def meal_charges(start_time, end_time, xls_name, price):
 
 
 # 4个参数分别是：开始时间-结束时间-表格名称-每餐费用
-meal_charges('08:00', '13:00', '早餐费', 4)
-meal_charges('13:01', '18:30', '晚餐费', 12)
+meal_charges('07:30', '09:30', '早餐次数', 4)
+meal_charges('17:00', '18:30', '晚餐次数', 11)
 
 
 # 此函数计算‘总费用=早餐费+晚餐费’
 def count_charges():
-    df1 = pd.read_excel('早餐费2.xlsx')
-    df2 = pd.read_excel('晚餐费2.xlsx')
+    df1 = pd.read_excel('早餐次数2.xlsx')
+    df2 = pd.read_excel('晚餐次数2.xlsx')
 
     df1 = df1.drop(df1.columns[[3]], axis=1)
     df2 = df2.drop(df2.columns[[3]], axis=1)
@@ -136,33 +136,20 @@ def count_charges():
     df.fillna(0, inplace=True)
 
     # 计算总费用，并保存到新的列中
-    df['总费用'] = df['早餐费'] + df['晚餐费']
+    # df['总费用'] = df['早餐费'] + df['晚餐费']
     # df['总费用'] = df.groupby(['姓名'])['费用'].transform('sum')
 
     # 删除姓名重复的行，只保留第一行
     df.drop_duplicates(subset='姓名', keep='first', inplace=True)
 
+    df.to_excel('每人次数.xlsx', index=False)
+
     # 按部门进行分表（部门列中如果出现异常，此处会失败）
-    grouped = df.groupby('部门')
-    
-    with pd.ExcelWriter('本月餐费记录.xlsx', mode='a') as writer:
-        for name, group in grouped:
-            group.to_excel(writer, sheet_name=name, index=False)
+    # grouped = df.groupby('部门')
+
+    # with pd.ExcelWriter('本月餐费记录.xlsx', mode='a') as writer:
+    #     for name, group in grouped:
+    #         group.to_excel(writer, sheet_name=name, index=False)
 
 
 count_charges()
-
-
-
-
-# 此函数实现给每人生成一个只含费用的excel表格
-# def everyone_charge():
-#     df = pd.read_excel('总费用.xlsx')
-
-#     # 将每个人的行保存到新的excel文件中
-#     def save_to_excel(group):
-#         group.to_excel(f"{group['姓名'].iloc[0]}.xlsx", index=False)
-
-#     df.groupby('姓名', group_keys=False).apply(save_to_excel)
-
-# everyone_charge()
